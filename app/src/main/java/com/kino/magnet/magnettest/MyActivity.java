@@ -6,6 +6,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -27,8 +28,10 @@ public class MyActivity extends Activity implements SensorEventListener{
     public int buttonState =0;
     public float[] startPoint = new float[3];
     public float totalDistance = 0;
+    public boolean isCalib = true;
 
     public ArrayList<float[]> valuesList = new ArrayList<float[]>();
+    public ArrayList<float[]> referencePoint = new ArrayList<float[]>();
 
 
     @Override
@@ -59,6 +62,9 @@ public class MyActivity extends Activity implements SensorEventListener{
                     startPoint = new float[3];
                     lap =0;
                     valuesList = new ArrayList<float[]>();
+                    referencePoint = new ArrayList<float[]>();
+                    isCalib = true;
+
                     totalDistance = 0;
                 }
 
@@ -144,7 +150,7 @@ public class MyActivity extends Activity implements SensorEventListener{
                         count = 0;
                         totalDistance = 0;
                         lap++;
-
+                        isCalib = false;
                     }
                 }
 
@@ -152,11 +158,7 @@ public class MyActivity extends Activity implements SensorEventListener{
                     count++;
                     totalDistance += MagUtility.calcDistance(prePoint, sensorEvent.values);
 
-                    str = "prePointとの距離:" + MagUtility.calcDistance(prePoint, sensorEvent.values)
-                            +"\nポイント更新回数" + count
-                            +"\n総変化距離"+ totalDistance
-                            +"\n"+ lap +"周目";
-                    value2.setText(str);
+
 
                     if(startPoint[0] == 0 && prePoint[0] != 0){
                         startPoint[0] = prePoint[0];
@@ -164,6 +166,41 @@ public class MyActivity extends Activity implements SensorEventListener{
                         startPoint[2] = prePoint[2];
                     }
 
+                    if(isCalib){
+                        if(startPoint[0] != 0) {
+                            referencePoint.add(sensorEvent.values);
+
+                            str = "prePointとの距離:" + MagUtility.calcDistance(prePoint, sensorEvent.values)
+                                    + "\nポイント更新回数" + count
+                                    + "\n総変化距離" + totalDistance
+                                    + "\n" + lap + "周目";
+                            value2.setText(str);
+                        }
+
+                    }
+                    else {
+
+                        float min = 100;
+                        int minP = -1;
+
+                        Log.d("main activity","matching start");
+                        for(int i = 0; i < referencePoint.size(); i++){
+                            Log.d("main activity", ""+MagUtility.calcDistance(referencePoint.get(i),sensorEvent.values));
+                            if(MagUtility.calcDistance(referencePoint.get(i),sensorEvent.values) < min){
+                                min = MagUtility.calcDistance(referencePoint.get(i),sensorEvent.values);
+                                minP = i;
+                            }
+                        }
+
+
+
+                        str = "prePointとの距離:" + MagUtility.calcDistance(prePoint, sensorEvent.values)
+                                +"\nポイント更新回数" + count
+                                +"\nリファレンスポイントサイズ"+ referencePoint.size()
+                                +"\n"+ lap +"周目"
+                                +"\n"+minP+"点目";
+                        value2.setText(str);
+                    }
 
                     prePoint[0] = sensorEvent.values[0];
                     prePoint[1] = sensorEvent.values[1];
